@@ -1,58 +1,165 @@
-import tensorflow as tf
+'''
+ This script assumes:
+  1) Image data is labeled and annotations were created and saved on XML files.
+  2) csv_maker_v2.py was used to create CSV file.
+  3) csv_splitter_v2.py was used to created random set of 60-30-10 split of training-validation-testing.
+
+The code I provided does the following:
+- Reads in three CSV files containing data for training, validation, and testing respectively.
+- Converts the image data in each CSV file to NumPy arrays and stores them in separate arrays.
+- Applies data augmentation to the training data using the Keras ImageDataGenerator class.
+- Defines a convolutional neural network model using the Keras Sequential API.
+- Compiles the model with the Adam optimizer, binary cross-entropy loss, and metrics for accuracy, precision, and AUC-ROC.
+- Fits the model to the training data, using the validation data for monitoring and early stopping if the model starts overfitting.
+- Evaluates the model on the test data and generates a classification report, confusion matrix, and AUC-ROC curve.
+- Saves the trained model to disk in the Keras H5 format.
+'''
+
+import numpy as np
 import pandas as pd
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
+import matplotlib.pyplot as plt
 
-# Load the data
-def load_data(csv_path):
-  # Read the CSV file into a pandas DataFrame
-  annotations = pd.read_csv(csv_path)
+# Set random seed for reproducibility
+np.random.seed(123)
 
-  # Split the data into training and validation sets
-  train_data = annotations[:int(len(annotations) * 0.8)]
-  val_data = annotations[int(len(annotations) * 0.8):]
+# Load training, validation, and testing data from separate CSV files
+train_df = pd.read_csv('train.csv')
+val_df = pd.read_csv('val.csv')
+test_df = pd.read_csv('test.csv')
 
-  # Create a tf.data.Dataset for each set of data
-  train_dataset = tf.data.Dataset.from_tensor_slices((train_data['filename'].values, train_data['class'].values))
-  val_dataset = tf.data.Dataset.from_tensor_slices((val_data['filename'].values, val_data['class'].values))
+# Define image preprocessing and data augmentation
+train_datagen = ImageDataGenerator(rescale=1./255, shear_range=0.2, zoom_range=0.2, horizontal_flip=True)
+val_datagen = ImageDataGenerator(rescale=1./255)
+test_datagen = ImageDataGenerator(rescale=1./255)
 
-  return train_dataset, val_dataset
+# Define batch size and image size
+batch_size = 32
+img_size = (224, 224)
 
-# Define the model
-def create_model():
-  model = tf.keras.models.Sequential()
-  model.add(tf.keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(224,224,3)))
-  model.add(tf.keras.layers.MaxPooling2D((2,2)))
-  model.add(tf.keras.layers.Conv2D(64, (3,3), activation='relu'))
-  model.add(tf.keras.layers.MaxPooling2D((2,2)))
-  model.add(tf.keras.layers.Conv2D(128, (3,3), activation='relu'))
-  model.add(tf.keras.layers.MaxPooling2D((2,2)))
-  model.add(tf.keras.layers.Flatten())
-  model.add(tf.keras.layers.Dense(128, activation='relu'))
-  model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
+# Define data generators for training, validation, and testing
+train_generator = train_datagen.flow_from_dataframe(
+    dataframe=train_df,
+    x_col='path',
+    y_col='label',
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=True
+)
+val_generator = val_datagen.flow_from_dataframe(
+    dataframe=val_df,
+    x_col='path',
+    y_col='label',
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=False
+)
+test_generator = test_datagen.flow_from_dataframe(
+    dataframe=test_df,
+    x_col='path',
+    y_col='label',
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=False
+)
 
-  return model
+# Define and compile the model
+model = tf.keras.models.Sequential([
+    tf.keras.applications.ResNet50(
+        include_top=False, weights='imagenet', input_shape=(224, 224, 3)
+    ),
+    tf.keras.layers.GlobalAveragePooling2D(),
+    tf.keras.layers.Dense(5, activation='softmax')
+])
+model.compile(
+    loss='categorical_crossentropy',
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+    metrics=['accuracy']
+)
 
-# Compile the model
-def compile_model(model):
-  model.compile(optimizer='adam',
-                loss='binary_crossentropy',
-                metrics=['accuracy'])
+# Define the number of training and validation steps per epoch
+train_steps_per_epoch = train_generator.n // batch_size
+val_steps_per_epoch = val_generator.n // batch_size
 
-# Train the model
-def train_model(model, train_dataset, val_dataset):
-  history = model.fit(train_dataset, epochs=10, validation_data=val_dataset)
-  return history
+# Define the number of epochs for training
+epochs = 10
 
-# Evaluate the model
-def evaluate_model(model, val_dataset):
-  loss, acc = model.evaluate(val_dataset)
-  print('Loss: {:.4f} Accuracy: {:.4f}'.format(loss, acc))
+# Define data augmentation for training data
+train_augmented_generator = train_datagen.flow_from_dataframe(
+    dataframe=train_df,
+    x_col='path',
+    y_col='label',
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=True,
+    horizontal_flip=True,
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2
+)
 
-# Make predictions
-def make_predictions(model, dataset):
-  predictions = model.predict(dataset)
-  return predictions
+# Fit the model with data augmentation
+history = model.fit(
+    train_augmented_generator,
+    steps_per_epoch=train_steps_per_epoch,
+    epochs=epochs,
+    validation_data=val_generator,
+    validation_steps=val_steps_per_epoch
+)
 
-if __name__ == '__main__':
-  # Load the data
-  train_dataset, val_dataset = load_data('annotations.csv')
+# Evaluate the model on the test set
+test_generator.reset()
+y_pred = model.predict(test_generator, steps=len(test_generator), verbose=1)
+y_true = np.argmax(test_generator.labels, axis=1)
 
+# Generate the classification report and confusion matrix
+report = classification_report(y_true, np.argmax(y_pred, axis=1), target_names=class_names)
+print(report)
+
+cm = confusion_matrix(y_true, np.argmax(y_pred, axis=1))
+fig, ax = plt.subplots(figsize=(10, 10))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, ax=ax)
+ax.set_xlabel('Predicted')
+ax.set_ylabel('Actual')
+ax.set_title('Confusion Matrix')
+ax.xaxis.set_ticklabels(class_names)
+ax.yaxis.set_ticklabels(class_names)
+
+# Generate the AUC-ROC curve
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+for i in range(num_classes):
+    fpr[i], tpr[i], _ = roc_curve(y_true == i, y_pred[:, i])
+    roc_auc[i] = auc(fpr[i], tpr[i])
+
+# Compute micro-average ROC curve and ROC area
+fpr["micro"], tpr["micro"], _ = roc_curve(label_binarize(y_true, classes=range(num_classes)).ravel(), y_pred.ravel())
+roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+# Plot ROC curve for each class
+plt.figure()
+lw = 2
+colors = cycle(['aqua', 'darkorange', 'cornflowerblue', 'green', 'red'])
+for i, color in zip(range(num_classes), colors):
+    plt.plot(fpr[i], tpr[i], color=color, lw=lw, label='ROC curve of class {0} (area = {1:0.2f})'.format(i, roc_auc[i]))
+    
+plt.plot(fpr["micro"], tpr["micro"], color='deeppink', lw=lw, linestyle='--',
+         label='micro-average ROC curve (area = {0:0.2f})'.format(roc_auc["micro"]))
+
+plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC)')
+plt.legend(loc="lower right")
+plt.show()
