@@ -21,14 +21,19 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # Set random seed for reproducibility
 np.random.seed(123)
 
 # Load training, validation, and testing data from separate CSV files
-train_df = pd.read_csv('train.csv')
-val_df = pd.read_csv('val.csv')
-test_df = pd.read_csv('test.csv')
+# With tqdm progress bar
+train_df = tqdm(pd.read_csv('train.csv'))
+val_df = tqdm(pd.read_csv('val.csv'))
+test_df = tqdm(pd.read_csv('test.csv'))
+
+
+
 
 # Define image preprocessing and data augmentation
 train_datagen = ImageDataGenerator(rescale=1./255, shear_range=0.2, zoom_range=0.2, horizontal_flip=True)
@@ -82,6 +87,7 @@ model.compile(
     metrics=['accuracy']
 )
 
+
 # Define the number of training and validation steps per epoch
 train_steps_per_epoch = train_generator.n // batch_size
 val_steps_per_epoch = val_generator.n // batch_size
@@ -107,13 +113,18 @@ train_augmented_generator = train_datagen.flow_from_dataframe(
 )
 
 # Fit the model with data augmentation
-history = model.fit(
-    train_augmented_generator,
-    steps_per_epoch=train_steps_per_epoch,
-    epochs=epochs,
-    validation_data=val_generator,
-    validation_steps=val_steps_per_epoch
-)
+history = None
+with tqdm(total=epochs, desc='Training') as pbar:
+    for epoch in range(epochs):
+        history = model.fit(
+            train_augmented_generator,
+            steps_per_epoch=train_steps_per_epoch,
+            epochs=1,
+            validation_data=val_generator,
+            validation_steps=val_steps_per_epoch,
+            verbose=0
+        )
+        pbar.update(1)
 
 # Evaluate the model on the test set
 test_generator.reset()
@@ -137,9 +148,10 @@ ax.yaxis.set_ticklabels(class_names)
 fpr = dict()
 tpr = dict()
 roc_auc = dict()
-for i in range(num_classes):
+for i in tqdm(range(num_classes), desc='Computing ROC curve'):
     fpr[i], tpr[i], _ = roc_curve(y_true == i, y_pred[:, i])
     roc_auc[i] = auc(fpr[i], tpr[i])
+
 
 # Compute micro-average ROC curve and ROC area
 fpr["micro"], tpr["micro"], _ = roc_curve(label_binarize(y_true, classes=range(num_classes)).ravel(), y_pred.ravel())
