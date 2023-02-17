@@ -28,9 +28,9 @@ np.random.seed(123)
 
 # Load training, validation, and testing data from separate CSV files
 # With tqdm progress bar
-train_df = tqdm(pd.read_csv('train.csv'))
-val_df = tqdm(pd.read_csv('val.csv'))
-test_df = tqdm(pd.read_csv('test.csv'))
+train_df = tqdm(pd.read_csv('train.csv', header=0))
+val_df = tqdm(pd.read_csv('val.csv', header=0))
+test_df = tqdm(pd.read_csv('test.csv', header=0))
 
 
 
