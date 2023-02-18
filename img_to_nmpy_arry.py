@@ -55,6 +55,12 @@ sleep(1)
 train_data = pd.read_csv(train_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
 val_data = pd.read_csv(val_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
 test_data = pd.read_csv(test_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
+print("Data loading complete!")
+
+# Create labels using labels column in CSV
+train_labels = np.array(train_data['label'])
+val_labels = np.array(val_data['label'])
+test_labels = np.array(test_data['label'])
 
 # Create NumPy arrays of images for each set
 print("Creating Numpy array of images for each set" )
@@ -83,6 +89,14 @@ try:
         image = keras.preprocessing.image.img_to_array(image)
         test_images.append(image)
     test_images = np.array(test_images)
+
+    #Print shape of NumPy arrays
+    print("Shape of train_images:", train_images.shape)
+    print("Shape of train_labels:", train_labels.shape)
+    print("Shape of val_images:", val_images.shape)
+    print("Shape of val_labels:", val_labels.shape)
+    print("Shape of test_images:", test_images.shape)
+    print("Shape of test_labels:", test_labels.shape)
 
     # Print the first three elements of each NumPy array
     print("First three elements of train_images: ")
