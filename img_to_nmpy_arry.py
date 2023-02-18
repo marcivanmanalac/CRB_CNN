@@ -52,9 +52,9 @@ else:
 # Load data from CSV files
 print("Loading data from the CSV files.")
 sleep(1)
-train_data = pd.read_csv(train_csv)
-val_data = pd.read_csv(val_csv)
-test_data = pd.read_csv(test_csv)
+train_data = pd.read_csv(train_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
+val_data = pd.read_csv(val_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
+test_data = pd.read_csv(test_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
 
 # Create NumPy arrays of images for each set
 print("Creating Numpy array of images for each set" )
