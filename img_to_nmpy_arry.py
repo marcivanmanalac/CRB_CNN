@@ -6,7 +6,10 @@ from tkinter import filedialog
 from time import sleep
 from tqdm import tqdm
 import os.path
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use GPU 0
 
+# Looks for csv files using GUI
 def browse_csvs():
     root = tk.Tk()
     root.withdraw()
@@ -48,7 +51,33 @@ elif mode == '2':
 else:
     print("Invalid input. Please enter 1 or 2.")
 
-    
+
+# Read CSV Data first to ensure
+print("Reading some of data from the CSV files.")
+sleep(1)
+# Use the read_csv function to read the first three lines of the CSV file
+train_data_head = pd.read_csv(train_csv,nrows=3)
+val_data_head = pd.read_csv(val_csv,nrows=3) 
+test_data_head = pd.read_csv(test_csv,nrows=3)
+
+# Read the last row of the csv file
+train_tail = pd.read_csv(train_csv, skiprows=range(1, len(train_data_head)+1))
+val_tail = pd.read_csv(val_csv, skiprows=range(1, len(val_data_head)+1))
+test_tail = pd.read_csv(test_csv, skiprows=range(1, len(test_data_head)+1))
+
+# concatenate the first three rows and the last row into a single DataFrame
+train_print = pd.concat([train_data_head, train_tail], ignore_index=True)
+val_print = pd.concat([val_data_head, val_tail], ignore_index=True)
+test_print = pd.concat([test_data_head, test_tail], ignore_index=True)
+
+print('Values inside the data set:')
+print('Train set:')
+print(train_print)
+print('Validation set:')
+print(val_print)
+print('Test Set:')
+print(test_print)
+ 
 # Load data from CSV files
 print("Loading data from the CSV files.")
 sleep(1)
@@ -69,24 +98,22 @@ try:
     train_images = []
     for i, row in tqdm(train_data.iterrows(), total=len(train_data)):
         path = row['path']
-        image = keras.preprocessing.image.load_img(path, target_size=(224, 224))
-        image = keras.preprocessing.image.img_to_array(image)
+        # Load image and turn into array
+        image = keras.utils.image_dataset_from_directory(path, image_size=(224, 224))
         train_images.append(image)
     train_images = np.array(train_images)
 
     val_images = []
     for i, row in tqdm(val_data.iterrows(), total=len(val_data)):
         path = row['path']
-        image = keras.preprocessing.image.load_img(path, target_size=(224, 224))
-        image = keras.preprocessing.image.img_to_array(image)
+        image = keras.utils.image_dataset_from_directory(path, image_size=(224, 224))
         val_images.append(image)
     val_images = np.array(val_images)
 
     test_images = []
     for i, row in tqdm(test_data.iterrows(), total=len(test_data)):
         path = row['path']
-        image = keras.preprocessing.image.load_img(path, target_size=(224, 224))
-        image = keras.preprocessing.image.img_to_array(image)
+        image = keras.utils.image_dataset_from_directory(path, image_size=(224, 224))
         test_images.append(image)
     test_images = np.array(test_images)
 
