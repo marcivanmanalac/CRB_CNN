@@ -18,21 +18,92 @@ The code I provided does the following:
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import tkinter as tk
+from tkinter import filedialog
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+import os
+import os.path
+from time import sleep
 # Set random seed for reproducibility
 np.random.seed(123)
 
+# Looks for csv files using GUI
+def browse_csvs():
+    root = tk.Tk()
+    root.withdraw()
+    print("Select the Img_to_CSV files")
+    train_csv = filedialog.askopenfilename(parent=root, title='Choose the Training Set CSV')
+    #check if invalid csv file
+    if not os.path.isfile(train_csv):
+        print("Error: Invalid file path for training set CSV. Please enter a valid file path.")
+        return
+
+    val_csv = filedialog.askopenfilename(parent=root, title='Choose the Validation Set CSV')
+    if not os.path.isfile(val_csv):
+        print("Error: Invalid file path for training set CSV. Please enter a valid file path.")
+        return
+    test_csv = filedialog.askopenfilename(parent=root, title='Choose the Test Set CSV')
+    if not os.path.isfile(test_csv):
+        print("Error: Invalid file path for training set CSV. Please enter a valid file path.")
+        return
+    dest_directory = filedialog.askdirectory(parent=root, title='Choose the destination for the generated numPy files: ')
+    if not os.path.isdir(dest_directory):
+        print("Error: Invalid directory path for destination directory. Please enter a valid directory path.")
+        return
+
+    return train_csv, test_csv, val_csv, dest_directory
+
+def headless_mode():
+    train_csv = input("Enter the path of the Training Set CSV: ")
+    val_csv = input("Enter the path of the Validation Set CSV:  ")
+    test_csv = input("Enter the path of the Test Set CSV: ")
+    dest_directory = input("Choose the destination for the generated numPy files: ")
+    return train_csv, test_csv, val_csv, dest_directory
+
+mode = input("Enter 1 for headless mode or 2 for desktop mode: ")
+if mode == '1':
+    #capture the return variables
+    train_csv, val_csv,test_csv, dest_directory = headless_mode() 
+elif mode == '2':
+    train_csv, val_csv,test_csv, dest_directory = browse_csvs()
+else:
+    print("Invalid input. Please enter 1 or 2.")
+
+# Read CSV Data first to ensure
+print("Reading some of data from the CSV files.")
+sleep(1)
+# Use the read_csv function to read the first three lines of the CSV file
+train_data_head = pd.read_csv(train_csv,nrows=3)
+val_data_head = pd.read_csv(val_csv,nrows=3) 
+test_data_head = pd.read_csv(test_csv,nrows=3)
+
+# Read the last row of the csv file
+train_tail = pd.read_csv(train_csv, skiprows=range(1, len(train_data_head)+1))
+val_tail = pd.read_csv(val_csv, skiprows=range(1, len(val_data_head)+1))
+test_tail = pd.read_csv(test_csv, skiprows=range(1, len(test_data_head)+1))
+
+# concatenate the first three rows and the last row into a single DataFrame
+train_print = pd.concat([train_data_head, train_tail], ignore_index=True)
+val_print = pd.concat([val_data_head, val_tail], ignore_index=True)
+test_print = pd.concat([test_data_head, test_tail], ignore_index=True)
+
+print('Values inside the data set:')
+print('Train set:')
+print(train_print)
+print('Validation set:')
+print(val_print)
+print('Test Set:')
+print(test_print)
+
 # Load training, validation, and testing data from separate CSV files
-# With tqdm progress bar
-train_df = tqdm(pd.read_csv('train.csv', header=0))
-val_df = tqdm(pd.read_csv('val.csv', header=0))
-test_df = tqdm(pd.read_csv('test.csv', header=0))
-
-
+print("Loading data from the CSV files.")
+sleep(1)
+train_df = pd.read_csv(train_csv, header=0)
+val_df = pd.read_csv(val_csv, header=0)
+test_df = pd.read_csv(test_csv, header=0)
 
 
 # Define image preprocessing and data augmentation
