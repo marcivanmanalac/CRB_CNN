@@ -20,7 +20,7 @@ import pandas as pd
 import tensorflow as tf
 import tkinter as tk
 from tkinter import filedialog
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -49,7 +49,7 @@ def browse_csvs():
     if not os.path.isfile(test_csv):
         print("Error: Invalid file path for training set CSV. Please enter a valid file path.")
         return
-    dest_directory = filedialog.askdirectory(parent=root, title='Choose the destination for the generated numPy files: ')
+    dest_directory = filedialog.askdirectory(parent=root, title='Choose the destination for the generated file(s): ')
     if not os.path.isdir(dest_directory):
         print("Error: Invalid directory path for destination directory. Please enter a valid directory path.")
         return
@@ -60,7 +60,7 @@ def headless_mode():
     train_csv = input("Enter the path of the Training Set CSV: ")
     val_csv = input("Enter the path of the Validation Set CSV:  ")
     test_csv = input("Enter the path of the Test Set CSV: ")
-    dest_directory = input("Choose the destination for the generated numPy files: ")
+    dest_directory = input("Choose the destination for the generated file(s): ")
     return train_csv, test_csv, val_csv, dest_directory
 
 mode = input("Enter 1 for headless mode or 2 for desktop mode: ")
@@ -101,10 +101,18 @@ print(test_print)
 # Load training, validation, and testing data from separate CSV files
 print("Loading data from the CSV files.")
 sleep(1)
-train_df = pd.read_csv(train_csv, header=0)
-val_df = pd.read_csv(val_csv, header=0)
-test_df = pd.read_csv(test_csv, header=0)
+try:
+    train_data = pd.read_csv(train_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
+    val_data = pd.read_csv(val_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
+    test_data = pd.read_csv(test_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
+    print('Loading Data Complete!')
+except:
+    print('Error Loading Data')
 
+# Create labels using labels column in CSV
+train_labels = np.array(train_data['label'])
+val_labels = np.array(val_data['label'])
+test_labels = np.array(test_data['label'])
 
 # Define image preprocessing and data augmentation
 train_datagen = ImageDataGenerator(rescale=1./255, shear_range=0.2, zoom_range=0.2, horizontal_flip=True)
@@ -117,7 +125,7 @@ img_size = (224, 224)
 
 # Define data generators for training, validation, and testing
 train_generator = train_datagen.flow_from_dataframe(
-    dataframe=train_df,
+    dataframe=train_data,
     x_col='path',
     y_col='label',
     target_size=img_size,
@@ -126,7 +134,7 @@ train_generator = train_datagen.flow_from_dataframe(
     shuffle=True
 )
 val_generator = val_datagen.flow_from_dataframe(
-    dataframe=val_df,
+    dataframe=val_data,
     x_col='path',
     y_col='label',
     target_size=img_size,
@@ -135,7 +143,7 @@ val_generator = val_datagen.flow_from_dataframe(
     shuffle=False
 )
 test_generator = test_datagen.flow_from_dataframe(
-    dataframe=test_df,
+    dataframe=test_data,
     x_col='path',
     y_col='label',
     target_size=img_size,
@@ -168,7 +176,7 @@ epochs = 10
 
 # Define data augmentation for training data
 train_augmented_generator = train_datagen.flow_from_dataframe(
-    dataframe=train_df,
+    dataframe=train_data,
     x_col='path',
     y_col='label',
     target_size=img_size,

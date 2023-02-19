@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
+import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras import preprocessing
 import tkinter as tk
 from tkinter import filedialog
 from time import sleep
@@ -99,22 +101,25 @@ try:
     for i, row in tqdm(train_data.iterrows(), total=len(train_data)):
         path = row['path']
         # Load image and turn into array
-        image = keras.utils.image_dataset_from_directory(path, image_size=(224, 224))
-        train_images.append(image)
+        img_pil=tf.keras.preprocessing.image.load_img(path)
+        img = tf.keras.preprocessing.image.array_to_img(img_pil)
+        train_images.append(img)
     train_images = np.array(train_images)
 
     val_images = []
     for i, row in tqdm(val_data.iterrows(), total=len(val_data)):
         path = row['path']
-        image = keras.utils.image_dataset_from_directory(path, image_size=(224, 224))
-        val_images.append(image)
+        img_pil=tf.keras.preprocessing.image.load_img(path)
+        img = tf.keras.preprocessing.image.array_to_img(img_pil)
+        val_images.append(img)
     val_images = np.array(val_images)
 
     test_images = []
     for i, row in tqdm(test_data.iterrows(), total=len(test_data)):
         path = row['path']
-        image = keras.utils.image_dataset_from_directory(path, image_size=(224, 224))
-        test_images.append(image)
+        img_pil=tf.keras.preprocessing.image.load_img(path)
+        img = tf.keras.preprocessing.image.array_to_img(img_pil)
+        test_images.append(img)
     test_images = np.array(test_images)
 
     #Print shape of NumPy arrays
