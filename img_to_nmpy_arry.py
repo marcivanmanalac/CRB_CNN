@@ -80,12 +80,12 @@ print(val_print)
 print('Test Set:')
 print(test_print)
  
-# Load data from CSV files
+# Load data from CSV fileiis
 print("Loading data from the CSV files.")
 sleep(1)
-train_data = pd.read_csv(train_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
-val_data = pd.read_csv(val_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
-test_data = pd.read_csv(test_csv, dtype={'filename': str, 'path': str, 'xmin': int, 'ymin': int, 'xmax': int, 'ymax': int, 'label': str}, na_values=['NA', 'NaN'])
+train_data = pd.read_csv(train_csv,header=0)
+val_data = pd.read_csv(val_csv,header=0)
+test_data = pd.read_csv(test_csv)
 print("Data loading complete!")
 
 # Create labels using labels column in CSV
@@ -94,33 +94,46 @@ val_labels = np.array(val_data['label'])
 test_labels = np.array(test_data['label'])
 
 # Create NumPy arrays of images for each set
-print("Creating Numpy array of images for each set" )
+print("Creating Numpy array of images for each set")
 sleep(1)
 try:
     train_images = []
+    header_skipped = False
     for i, row in tqdm(train_data.iterrows(), total=len(train_data)):
+        if not header_skipped:
+            header_skipped = True
+            continue
         path = row['path']
         # Load image and turn into array
-        img_pil=tf.keras.preprocessing.image.load_img(path)
+        img_pil = tf.keras.preprocessing.image.load_img(path)
         img = tf.keras.preprocessing.image.array_to_img(img_pil)
         train_images.append(img)
     train_images = np.array(train_images)
 
     val_images = []
+    header_skipped = False
     for i, row in tqdm(val_data.iterrows(), total=len(val_data)):
+        if not header_skipped:
+            header_skipped = True
+            continue
         path = row['path']
-        img_pil=tf.keras.preprocessing.image.load_img(path)
+        img_pil = tf.keras.preprocessing.image.load_img(path)
         img = tf.keras.preprocessing.image.array_to_img(img_pil)
         val_images.append(img)
     val_images = np.array(val_images)
 
     test_images = []
+    header_skipped = False
     for i, row in tqdm(test_data.iterrows(), total=len(test_data)):
+        if not header_skipped:
+            header_skipped = True
+            continue
         path = row['path']
-        img_pil=tf.keras.preprocessing.image.load_img(path)
+        img_pil = tf.keras.preprocessing.image.load_img(path)
         img = tf.keras.preprocessing.image.array_to_img(img_pil)
         test_images.append(img)
     test_images = np.array(test_images)
+
 
     #Print shape of NumPy arrays
     print("Shape of train_images:", train_images.shape)

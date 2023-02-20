@@ -54,7 +54,7 @@ test_split = 0.1
 # Read the CSV file and split the rows randomly
 with open(input_file_path, 'r') as f:
     reader = csv.reader(f)
-    header = next(reader)  # Skip the header row
+    header = next(reader, None)  # Skip the header row
 
     # Shuffle the rows randomly
     rows = list(reader)
