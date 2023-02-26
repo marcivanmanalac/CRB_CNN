@@ -1,28 +1,14 @@
-'''
-This Python script prompts the user to select the mode of operation: headless mode or desktop mode. 
-In headless mode, the user is prompted to enter the path to a CSV file. 
-In desktop mode, the user can select the CSV file through a file dialog.
-
-Once the CSV file has been selected, the script opens the file, reads its content, 
-and replaces all forward slashes in the first column of each row with backslashes. 
-The edited rows are then written to a new CSV file called "edited_data.csv".
-
-After editing the first column of each row, the script prints the first three rows 
-of the edited CSV file to the terminal. 
-Finally, the script outputs a message indicating that the CSV file path column 
-has been successfully edited.
-'''
 import csv
 import os
 import tkinter as tk
 from tkinter import filedialog
 
 # Define a function to convert slashes based on user input
-def convert_slashes(path, replace_fwd):
+def convert_slashes(cell_value, replace_fwd):
     if replace_fwd:
-        return path.replace("/", "\\")
+        return cell_value.replace("/", "\\")
     else:
-        return path.replace("\\", "/")
+        return cell_value.replace("\\", "/")
 
 # Determine mode of operation
 mode = input("Select mode of operation:\n1. Headless mode\n2. Desktop mode\n")
@@ -42,23 +28,21 @@ replace_fwd = input("Do you want to convert '/' to '\\' (enter 'y' for yes or 'n
 
 # Open the CSV file and create a new file for the edited data
 if replace_fwd.lower() == 'y':
-    output_filename = os.path.splitext(path)[0] + '_fwd.csv'
-else:
     output_filename = os.path.splitext(path)[0] + '_bck.csv'
+else:
+    output_filename = os.path.splitext(path)[0] + '_fwd.csv'
 
 with open(path, "r") as input_file, open(output_filename, "w", newline="") as output_file:
     reader = csv.reader(input_file)
     writer = csv.writer(output_file)
 
-    # Read and discard the column names row
-    column_names = next(reader)
-    writer.writerow(column_names)
-    print(column_names)
-
     # Iterate over each row in the CSV file
     for i, row in enumerate(reader):
-        # Replace slashes in the path column based on user input
-        row[1] = convert_slashes(row[1], replace_fwd.lower() == 'y')
+        # Iterate over each cell in the row
+        for j, cell in enumerate(row):
+            # Replace slashes in the cell based on user input, if it's in the first column
+            if j == 0:
+                row[j] = convert_slashes(cell, replace_fwd.lower() == 'y')
 
         # Write the edited row to the new file
         writer.writerow(row)
@@ -70,5 +54,5 @@ with open(path, "r") as input_file, open(output_filename, "w", newline="") as ou
 if replace_fwd.lower() == 'y':
     print("CSV file path column edited successfully, '/' converted to '\\'!")
 else:
-    print("CSV file path column edited successfully, '\\' converted to '/'!") 
+    print("CSV file path column edited successfully, '\\' converted to '/'!")
 print(f'Saved output as {output_filename} in input folder.')
